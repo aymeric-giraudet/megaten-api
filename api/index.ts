@@ -1,5 +1,5 @@
 import { NowRequest, NowResponse } from "@vercel/node";
-import { ApolloServer, gql } from "apollo-server-micro";
+import { ApolloServer, gql, IResolvers } from "apollo-server-micro";
 import demons from "../data/demons.json";
 
 const typeDefs = gql`
@@ -67,13 +67,18 @@ const typeDefs = gql`
     stats: Stats!
   }
   type Query {
-    demons: [Demon]
+    demons(name: String, lvl: Int, race: String): [Demon]
   }
 `;
 
+const from = (filters) => (value) =>
+  filters !== {}
+    ? Object.keys(filters).every((f) => value[f] === filters[f])
+    : true;
+
 const resolvers = {
   Query: {
-    demons: () => demons,
+    demons: (_, args) => demons.filter(from(args)),
   },
 };
 
