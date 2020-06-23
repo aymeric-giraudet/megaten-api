@@ -1,5 +1,6 @@
 import { NowRequest, NowResponse } from "@vercel/node";
 import { ApolloServer, gql, IResolvers } from "apollo-server-micro";
+//@ts-nocheck
 import demons from "../data/demons.json";
 
 const typeDefs = gql`
@@ -66,19 +67,42 @@ const typeDefs = gql`
     skills: [Skill!]!
     stats: Stats!
   }
+  input DemonFilter {
+    name: String
+    lvl: Int
+    race: String
+  }
+  input Sort {
+    key: String!
+    order: String
+  }
   type Query {
-    demons(name: String, lvl: Int, race: String): [Demon]
+    demons(sort: Sort, filters: DemonFilter): [Demon]
   }
 `;
 
 const from = (filters) => (value) =>
-  filters !== {}
-    ? Object.keys(filters).every((f) => value[f] === filters[f])
-    : true;
+  filters ? Object.keys(filters).every((f) => value[f] === filters[f]) : true;
+
+const sort = (sort) => (a, b) => {
+  if (!sort) {
+    return 0;
+  }
+  let comparison;
+  if (a[sort.key] < b[sort.key]) {
+    comparison = -1;
+  } else if (a[sort.key] > b[sort.key]) {
+    comparison = 1;
+  } else {
+    comparison = 0;
+  }
+  return sort.order === "DESC" ? comparison * -1 : comparison;
+};
 
 const resolvers = {
   Query: {
-    demons: (_, args) => demons.filter(from(args)),
+    demons: (_, args) =>
+      demons.filter(from(args.filters)).sort(sort(args.sort)),
   },
 };
 
